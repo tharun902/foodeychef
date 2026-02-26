@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Culinary Resource AI · Pantry Chef</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Mono:wght@300;400;500&family=Crimson+Pro:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --cream: #faf6f0;
+      --warm-white: #fff9f2;
+      --brown-dark: #2c1a0e;
+      --brown-mid: #5c3a1e;
+      --brown-light: #a0693a;
+      --amber: #e8861a;
+      --amber-light: #f5b042;
+      --sage: #7a9e7e;
+      --sage-dark: #4a6b4e;
+      --red-spice: #c0392b;
+      --shadow: rgba(44, 26, 14, 0.15);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--cream);
+      font-family: "Crimson Pro", serif;
+      color: var(--brown-dark);
+      min-height: 100vh;
+    }
+
+    /* subtle noise texture */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* header */
+    header {
+      text-align: center;
+      padding: 48px 0 40px;
+      border-bottom: 2px solid var(--brown-mid);
+      margin-bottom: 48px;
+      position: relative;
+    }
+
+    header::after {
+      content: "✦ ✦ ✦";
+      display: block;
+      color: var(--amber);
+      font-size: 14px;
+      letter-spacing: 12px;
+      margin-top: 16px;
+    }
+
+    .logo-tag {
+      font-family: "DM Mono", monospace;
+      font-size: 11px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--brown-light);
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    h1 {
+      font-family: "Playfair Display", serif;
+      font-size: clamp(38px, 6vw, 72px);
+      font-weight: 900;
+      line-height: 1;
+      color: var(--brown-dark);
+    }
+
+    h1 span {
+      color: var(--amber);
+      font-style: italic;
+    }
+
+    .subtitle {
+      font-family: "Crimson Pro", serif;
+      font-style: italic;
+      font-size: 20px;
+      color: var(--brown-light);
+      margin-top: 10px;
+    }
+
+    /* main grid */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.4fr;
+      gap: 40px;
+      align-items: start;
+    }
+
+    @media (max-width: 768px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* panels */
+    .panel {
+      background: var(--warm-white);
+      border: 1.5px solid rgba(92, 58, 30, 0.2);
+      border-radius: 4px;
+      padding: 32px;
+      position: relative;
+      box-shadow: 4px 4px 0 rgba(92, 58, 30, 0.08);
+    }
+
+    .panel-title {
+      font-family: "Playfair Display", serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--brown-dark);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .panel-title .icon {
+      font-size: 20px;
+    }
+
+    .panel-desc {
+      font-size: 14px;
+      color: var(--brown-light);
+      font-style: italic;
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 1px dashed rgba(92, 58, 30, 0.25);
+    }
+
+    .field-label {
+      font-family: "DM Mono", monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--brown-mid);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* pantry ingredient list */
+    .ingredients-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 20px;
+    }
+
+    .ingredient-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      padding: 8px 10px;
+      border-radius: 3px;
+      transition: background 0.15s;
+      user-select: none;
+    }
+
+    .ingredient-item:hover {
+      background: rgba(232, 134, 26, 0.07);
+    }
+
+    /* big unified checkbox style */
+    .big-checkbox {
+      width: 28px;
+      height: 28px;
+      min-width: 28px;
+      border: 2px solid rgba(92, 58, 30, 0.4);
+      border-radius: 4px;
+      background: var(--cream);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .ingredient-item.checked .big-checkbox {
+      background: var(--amber);
+      border-color: var(--amber);
+    }
+
+    .big-checkbox::after {
+      content: "";
+      width: 14px;
+      height: 8px;
+      border-left: 2.5px solid white;
+      border-bottom: 2.5px solid white;
+      transform: rotate(-45deg) scale(0);
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      margin-top: -3px;
+    }
+
+    .ingredient-item.checked .big-checkbox::after {
+      transform: rotate(-45deg) scale(1);
+    }
+
+    .ingredient-name {
+      font-size: 15px;
+      color: var(--brown-dark);
+      line-height: 1.2;
+    }
+
+    .ingredient-emoji {
+      font-size: 16px;
+    }
+
+    .ingredient-item.checked .ingredient-name {
+      color: var(--brown-light);
+    }
+
+    .selected-count {
+      font-family: "DM Mono", monospace;
+      font-size: 11px;
+      color: var(--sage-dark);
+      letter-spacing: 1px;
+      text-align: right;
+      margin-bottom: 16px;
+    }
+
+    .selected-count strong {
+      color: var(--amber);
+    }
+
+    /* custom ingredient */
+    .custom-add {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .custom-input {
+      flex: 1;
+      padding: 10px 12px;
+      background: var(--cream);
+      border: 1.5px solid rgba(92, 58, 30, 0.25);
+      border-radius: 3px;
+      font-family: "Crimson Pro", serif;
+      font-size: 15px;
+      color: var(--brown-dark);
+      outline: none;
+    }
+
+    .custom-input:focus {
+      border-color: var(--sage);
+    }
+    .custom-input::placeholder {
+      color: rgba(92, 58, 30, 0.3);
+      font-style: italic;
+    }
+
+    .btn-add {
+      padding: 10px 16px;
+      background: var(--sage);
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      font-family: "DM Mono", monospace;
+      font-size: 12px;
+      letter-spacing: 1px;
+      transition: background 0.2s;
+    }
+
+    .btn-add:hover {
+      background: var(--sage-dark);
+    }
+
+    /* generate button */
+    .btn-generate {
+      width: 100%;
+      padding: 18px;
+      background: var(--brown-dark);
+      color: var(--amber-light);
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      font-family: "Playfair Display", serif;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      transition: all 0.25s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-generate::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, transparent 40%, rgba(245, 176, 66, 0.15) 100%);
+    }
+
+    .btn-generate:hover {
+      background: var(--brown-mid);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(44, 26, 14, 0.3);
+    }
+
+    .btn-generate:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-generate .btn-icon {
+      font-size: 22px;
+    }
+
+    /* cuisine chips */
+    .cuisine-filter {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+
+    .cuisine-chip {
+      padding: 6px 14px;
+      border: 1.5px solid rgba(92, 58, 30, 0.25);
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: transparent;
+      color: var(--brown-mid);
+      font-family: "Crimson Pro", serif;
+    }
+
+    .cuisine-chip.active {
+      background: var(--amber);
+      border-color: var(--amber);
+      color: white;
+      font-weight: 600;
+    }
+
+    .cuisine-chip:hover:not(.active) {
+      border-color: var(--amber);
+      color: var(--amber);
+    }
+
+    /* recipe output */
+    .recipe-output {
+      min-height: 300px;
+    }
+
+    .recipe-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 280px;
+      text-align: center;
+      border: 2px dashed rgba(92, 58, 30, 0.15);
+      border-radius: 4px;
+      padding: 40px;
+      color: rgba(92, 58, 30, 0.35);
+    }
+
+    .placeholder-icon {
+      font-size: 52px;
+      margin-bottom: 16px;
+      opacity: 0.6;
+    }
+    .placeholder-text {
+      font-style: italic;
+      font-size: 17px;
+    }
+
+    /* loading */
+    .loading-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 280px;
+      gap: 20px;
+    }
+
+    .loading-dots {
+      display: flex;
+      gap: 8px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      background: var(--amber);
+      border-radius: 50%;
+      animation: bounce 1.2s infinite;
+    }
+
+    .dot:nth-child(2) {
+      animation-delay: 0.2s;
+      background: var(--brown-light);
+    }
+    .dot:nth-child(3) {
+      animation-delay: 0.4s;
+      background: var(--sage);
+    }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+
+    .loading-text {
+      font-family: "Playfair Display", serif;
+      font-style: italic;
+      font-size: 18px;
+      color: var(--brown-light);
+    }
+
+    /* recipe card */
+    .recipe-card {
+      animation: fadeIn 0.5s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .recipe-header {
+      background: var(--brown-dark);
+      color: var(--cream);
+      padding: 24px 28px;
+      border-radius: 3px 3px 0 0;
+      margin: -32px -32px 24px;
+    }
+
+    .recipe-name {
+      font-family: "Playfair Display", serif;
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 8px;
+    }
+
+    .recipe-meta {
+      display: flex;
+      gap: 20px;
+      font-family: "DM Mono", monospace;
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: rgba(250, 246, 240, 0.6);
+    }
+
+    .recipe-meta span {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .recipe-section-title {
+      font-family: "Playfair Display", serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--brown-dark);
+      margin: 20px 0 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(92, 58, 30, 0.15);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* recipe ingredients as checkboxes — NO STRIKETHROUGH, just clean checkboxes */
+    .recipe-ingredient {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 0;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .recipe-ingredient .big-checkbox {
+      width: 22px;
+      height: 22px;
+      min-width: 22px;
+    }
+
+    /* when checked: only change the checkbox — no strike, no dim text */
+    .recipe-ingredient.checked .big-checkbox {
+      background: var(--amber);
+      border-color: var(--amber);
+    }
+
+    .recipe-ingredient.checked .big-checkbox::after {
+      transform: rotate(-45deg) scale(1);
+    }
+
+    /* no opacity, no line-through, text remains normal */
+    .recipe-ingredient.checked {
+      /* intentionally empty: strikethrough removed, opacity removed */
+    }
+
+    .recipe-steps {
+      counter-reset: steps;
+      list-style: none;
+      padding: 0;
+    }
+
+    .recipe-steps li {
+      counter-increment: steps;
+      display: flex;
+      gap: 14px;
+      padding: 10px 0;
+      border-bottom: 1px dashed rgba(92, 58, 30, 0.1);
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--brown-dark);
+    }
+
+    .step-num {
+      font-family: "Playfair Display", serif;
+      font-weight: 900;
+      font-size: 22px;
+      color: var(--amber);
+      min-width: 28px;
+      line-height: 1;
+      margin-top: 2px;
+    }
+
+    .recipe-tip {
+      background: linear-gradient(135deg, rgba(122, 158, 126, 0.1), rgba(122, 158, 126, 0.05));
+      border-left: 3px solid var(--sage);
+      padding: 14px 18px;
+      border-radius: 0 3px 3px 0;
+      margin-top: 20px;
+      font-style: italic;
+      font-size: 15px;
+      color: var(--sage-dark);
+    }
+
+    /* error box */
+    .error-box {
+      background: rgba(192, 57, 43, 0.07);
+      border: 1.5px solid rgba(192, 57, 43, 0.3);
+      border-radius: 3px;
+      padding: 20px;
+      color: var(--red-spice);
+      font-size: 15px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .divider {
+      text-align: center;
+      margin: 16px 0;
+      color: var(--amber);
+      font-size: 18px;
+      letter-spacing: 6px;
+      opacity: 0.6;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 60px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(92, 58, 30, 0.15);
+      font-family: "DM Mono", monospace;
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: rgba(92, 58, 30, 0.35);
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <span class="logo-tag">✦ Culinary Resource AI Specialist ✦</span>
+    <h1>The <span>Pantry</span> Chef</h1>
+    <p class="subtitle">Check your ingredients & let AI craft your perfect recipe</p>
+  </header>
+
+  <div class="main-grid">
+    <!-- LEFT: pantry & controls -->
+    <div>
+      <div class="panel">
+        <div class="panel-title"><span class="icon">🧺</span> My Pantry</div>
+        <p class="panel-desc">Check what you have — the AI will build recipes around your ingredients</p>
+
+        <div id="selectedCount" class="selected-count"><strong>0</strong> ingredients selected</div>
+        <div class="ingredients-grid" id="ingredientGrid"></div>
+        <div class="divider">— add more —</div>
+
+        <div class="custom-add">
+          <input type="text" id="customIngredient" class="custom-input" placeholder="e.g. truffle oil, miso paste…" />
+          <button class="btn-add" onclick="addCustom()">+ ADD</button>
+        </div>
+
+        <div class="field-label" style="margin-bottom: 10px">Cuisine Style</div>
+        <div class="cuisine-filter" id="cuisineFilter"></div>
+
+        <button class="btn-generate" id="generateBtn" onclick="generateRecipe()">
+          <span class="btn-icon">👨‍🍳</span> Generate My Recipe
+        </button>
+      </div>
+    </div>
+
+    <!-- RIGHT: recipe output -->
+    <div class="panel recipe-output" id="outputPanel">
+      <div class="panel-title"><span class="icon">📜</span> Your Recipe</div>
+      <p class="panel-desc">Crafted fresh by AI based on your pantry selection</p>
+      <div id="recipeContent">
+        <div class="recipe-placeholder">
+          <div class="placeholder-icon">🍽️</div>
+          <div class="placeholder-text">Select at least 2 ingredients<br />from your pantry to conjure a recipe</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Powered by Groq AI &nbsp;·&nbsp; Culinary Resource AI Specialist &nbsp;·&nbsp; 2026</footer>
+</div>
+
+<script>
+  const INGREDIENTS = [
+    { name: "Chicken", emoji: "🍗" },
+    { name: "Eggs", emoji: "🥚" },
+    { name: "Pasta", emoji: "🍝" },
+    { name: "Rice", emoji: "🍚" },
+    { name: "Tomatoes", emoji: "🍅" },
+    { name: "Onion", emoji: "🧅" },
+    { name: "Garlic", emoji: "🧄" },
+    { name: "Butter", emoji: "🧈" },
+    { name: "Cheese", emoji: "🧀" },
+    { name: "Spinach", emoji: "🥬" },
+    { name: "Potatoes", emoji: "🥔" },
+    { name: "Mushrooms", emoji: "🍄" },
+    { name: "Lemon", emoji: "🍋" },
+    { name: "Olive Oil", emoji: "🫙" },
+    { name: "Salmon", emoji: "🐟" },
+    { name: "Beans", emoji: "🫘" },
+    { name: "Cream", emoji: "🥛" },
+    { name: "Bell Pepper", emoji: "🫑" },
+  ];
+
+  const CUISINES = ["Any", "Italian", "Indian", "Thai", "Mexican", "French", "Japanese"];
+
+  let selected = new Set();
+  let selectedCuisine = "Any";
+  let customIngredients = [];
+
+  // render pantry ingredients
+  function renderIngredients() {
+    const grid = document.getElementById("ingredientGrid");
+    const all = [...INGREDIENTS, ...customIngredients];
+    grid.innerHTML = all
+      .map(
+        (ing) => `
+    <div class="ingredient-item ${selected.has(ing.name) ? "checked" : ""}"
+         onclick="toggleIngredient('${ing.name}')">
+      <div class="big-checkbox"></div>
+      <span class="ingredient-emoji">${ing.emoji || "🌿"}</span>
+      <span class="ingredient-name">${ing.name}</span>
+    </div>`
+      )
+      .join("");
+    document.getElementById("selectedCount").innerHTML = `<strong>${
+      selected.size
+    }</strong> ingredient${selected.size !== 1 ? "s" : ""} selected`;
+  }
+
+  function toggleIngredient(name) {
+    if (selected.has(name)) selected.delete(name);
+    else selected.add(name);
+    renderIngredients();
+  }
+
+  function addCustom() {
+    const input = document.getElementById("customIngredient");
+    const val = input.value.trim();
+    if (!val) return;
+    customIngredients.push({ name: val, emoji: "🌿" });
+    selected.add(val);
+    input.value = "";
+    renderIngredients();
+  }
+
+  // cuisine chips
+  function renderCuisines() {
+    document.getElementById("cuisineFilter").innerHTML = CUISINES.map(
+      (c) => `
+    <button class="cuisine-chip ${c === selectedCuisine ? "active" : ""}" onclick="selectCuisine('${c}')">${c}</button>`
+    ).join("");
+  }
+
+  function selectCuisine(c) {
+    selectedCuisine = c;
+    renderCuisines();
+  }
+
+  // GROQ API key (demo key – replace with your own if needed)
+  const GROQ_API_KEY = "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";
+
+  async function generateRecipe() {
+    const ingredients = Array.from(selected);
+
+    if (ingredients.length < 2) {
+      showError("🧺 Please select at least 2 ingredients from your pantry.");
+      return;
+    }
+
+    showLoading();
+
+    const cuisineNote = selectedCuisine !== "Any" ? ` The recipe must be ${selectedCuisine} cuisine.` : "";
+    const prompt = `You are a professional chef and culinary expert. Create a detailed, delicious recipe using MAINLY these ingredients: ${ingredients.join(", ")}.${cuisineNote}
+
+Respond ONLY with a JSON object in this exact format (no markdown, no backticks):
+{
+  "name": "Recipe Name",
+  "cuisine": "Cuisine type",
+  "prepTime": "X mins",
+  "cookTime": "X mins",
+  "servings": "X",
+  "difficulty": "Easy/Medium/Hard",
+  "ingredients": ["amount + ingredient", "..."],
+  "steps": ["Step description", "..."],
+  "tip": "A professional chef's tip for this dish"
+}`;
+
+    try {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${GROQ_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          max_tokens: 1000,
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error?.message || `API error ${res.status}`);
+      }
+
+      const data = await res.json();
+      let text = data.choices[0].message.content.trim();
+      text = text.replace(/```json|```/g, "").trim();
+      const recipe = JSON.parse(text);
+      showRecipe(recipe);
+    } catch (e) {
+      showError(`⚠️ ${e.message || "Something went wrong. Please try again."}`);
+    }
+  }
+
+  function showLoading() {
+    document.getElementById("recipeContent").innerHTML = `
+    <div class="loading-wrap">
+      <div class="loading-dots">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      </div>
+      <div class="loading-text">Crafting your recipe…</div>
+    </div>`;
+  }
+
+  function showError(msg) {
+    document.getElementById("recipeContent").innerHTML = `
+    <div class="error-box">
+      <div style="font-size:20px">⚠️</div>
+      <div>${msg}</div>
+    </div>`;
+  }
+
+  function showRecipe(r) {
+    const ingList = r.ingredients
+      .map(
+        (ing) => `
+    <div class="recipe-ingredient" onclick="this.classList.toggle('checked')">
+      <div class="big-checkbox"></div>
+      <span>${ing}</span>
+    </div>`
+      )
+      .join("");
+
+    const steps = r.steps
+      .map(
+        (s, i) => `
+    <li><span class="step-num">${i + 1}</span><span>${s}</span></li>`
+      )
+      .join("");
+
+    document.getElementById("recipeContent").innerHTML = `
+    <div class="recipe-card">
+      <div class="recipe-header">
+        <div class="recipe-name">${r.name}</div>
+        <div class="recipe-meta">
+          <span>🍽️ ${r.cuisine}</span>
+          <span>⏱ Prep ${r.prepTime}</span>
+          <span>🔥 Cook ${r.cookTime}</span>
+          <span>👤 ${r.servings} servings</span>
+          <span>📊 ${r.difficulty}</span>
+        </div>
+      </div>
+
+      <div class="recipe-section-title">🧂 Ingredients <small style="font-size:12px;font-weight:400;color:var(--brown-light);font-family:'DM Mono'">(check as you go)</small></div>
+      ${ingList}
+
+      <div class="recipe-section-title" style="margin-top:24px">👨‍🍳 Method</div>
+      <ol class="recipe-steps">${steps}</ol>
+
+      <div class="recipe-tip">💡 Chef's Tip: ${r.tip}</div>
+    </div>`;
+  }
+
+  // keyboard shortcut for custom ingredient
+  document.getElementById("customIngredient").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") addCustom();
+  });
+
+  // initial render
+  renderIngredients();
+  renderCuisines();
+</script>
+</body>
+</html>
